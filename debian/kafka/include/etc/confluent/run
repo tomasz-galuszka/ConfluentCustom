@@ -35,11 +35,5 @@ env | sort
 echo "===> User"
 id
 
-echo "===> Configuring ..."
-/etc/confluent/docker/configure
-
-echo "===> Running preflight checks ... "
-/etc/confluent/docker/ensure
-
-echo "===> Launching ... "
-/etc/confluent/docker/launch
+echo 'Running kafka and schema registry'
+exec /etc/confluent/docker/run && /etc/confluent/schema_registry/docker/run

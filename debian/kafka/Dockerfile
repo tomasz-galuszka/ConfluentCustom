@@ -30,9 +30,11 @@ ARG KAFKA_ADVERTISED_LISTENERS
 ENV KAFKA_ADVERTISED_LISTENERS=${KAFKA_ADVERTISED_LISTENERS}
 
 ENV COMPONENT=kafka
+ENV COMPONENT_2=schema-registry
 
 # primary
 EXPOSE 9092
+EXPOSE 8081
 
 RUN echo "===> installing ${COMPONENT}..." \
     && apt-get update && apt-get install -y confluent-kafka-${SCALA_VERSION}=${KAFKA_VERSION}${CONFLUENT_PLATFORM_LABEL}-${CONFLUENT_DEB_VERSION} \
@@ -45,8 +47,27 @@ RUN echo "===> installing ${COMPONENT}..." \
    	&& chmod -R ag+w /etc/${COMPONENT} /var/lib/${COMPONENT}/data /etc/${COMPONENT}/secrets
 
 
-VOLUME ["/var/lib/${COMPONENT}/data", "/etc/${COMPONENT}/secrets"]
+RUN echo "===> installing ${COMPONENT_2}..." \
+    && apt-get update && apt-get install -y \
+        confluent-${COMPONENT_2}=${CONFLUENT_VERSION}${CONFLUENT_PLATFORM_LABEL}-${CONFLUENT_DEB_VERSION} \
+        confluent-control-center=${CONFLUENT_VERSION}${CONFLUENT_PLATFORM_LABEL}-${CONFLUENT_DEB_VERSION} \
+        confluent-security=${CONFLUENT_VERSION}${CONFLUENT_PLATFORM_LABEL}-${CONFLUENT_DEB_VERSION} \
+    \
+    && echo "===> clean up ..."  \
+    && apt-get clean && rm -rf /tmp/* /var/lib/apt/lists/* \
+    \
+    && echo "===> Setting up ${COMPONENT_2} dirs" \
+    && mkdir -p /etc/${COMPONENT_2}/secrets\
+    && chmod -R ag+w /etc/${COMPONENT_2} /etc/${COMPONENT_2}/secrets
+
+
+VOLUME ["/var/lib/${COMPONENT}/data", "/etc/${COMPONENT}/secrets", "/etc/${COMPONENT_2}/secrets"]
 
 COPY include/etc/confluent/docker /etc/confluent/docker
 
-CMD ["/etc/confluent/docker/run"]
+COPY include/etc/confluent/schema_registry/docker /etc/confluent/schema_registry/docker
+
+COPY include/etc/confluent/run /etc/confluent/run
+
+RUN chmod +x /etc/confluent/run
+CMD ["/etc/confluent/run"]
